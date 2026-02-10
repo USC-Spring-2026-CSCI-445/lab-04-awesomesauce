@@ -6,7 +6,7 @@
     <arg name="z_pos" default="0.0"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(find csci445l)/worlds/lab4.world"/>
+        <arg name="world_name" value="$(find lab-04-awesomesauce)/worlds/lab4.world"/>
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>
         <arg name="gui" value="true"/>
@@ -28,9 +28,9 @@
         <param name="tf_prefix" value="$(arg multi_robot_name)"/>
     </node>
 
-    <node pkg="rviz" type="rviz" name="odometry_rviz" args="-d $(find csci445l)/rviz/development.rviz" />  
+    <node pkg="rviz" type="rviz" name="odometry_rviz" args="-d $(find lab-04-awesomesauce)/rviz/development.rviz" />  
 
-    <!-- Start lab4_sim.py with 'rosrun csci445l lab4_sim.py'. You can also uncomment the line below for it to run when this launch file is run -->
-    <!-- <node pkg="csci445l" type="lab4.py" name="lab4" output="screen" /> -->
+    <!-- Start lab4_sim.py with 'rosrun lab-04-awesomesauce lab4_sim.py'. You can also uncomment the line below for it to run when this launch file is run -->
+    <!-- <node pkg="lab-04-awesomesauce" type="lab4.py" name="lab4" output="screen" /> -->
 
 </launch>
