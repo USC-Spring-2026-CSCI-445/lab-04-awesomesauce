@@ -9,5 +9,5 @@
         <param name="tf_prefix" value="$(arg multi_robot_name)"/>
     </node>
 
-    <node pkg="rviz" type="rviz" name="odometry_rviz" args="-d $(find csci445l)/rviz/development.rviz" />  
+    <node pkg="rviz" type="rviz" name="odometry_rviz" args="-d $(find lab-04-awesomesauce)/rviz/development.rviz" />  
 </launch>

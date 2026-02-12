@@ -6,6 +6,9 @@ import rospy
 from geometry_msgs.msg import Twist
 from turtlebot3_msgs.msg import SensorState
 
+MAX_ROT_VEL = 2.84
+MAX_LIN_VEL = 0.22
+
 
 # P controller class
 class PController:
@@ -15,20 +18,32 @@ class PController:
 
     def __init__(self, kP, u_min, u_max):
         assert u_min < u_max, "u_min should be less than u_max"
-        # Initialize variables here
-        ######### Your code starts here #########
+        self.kP = kP
+        self.u_min = u_min
+        self.u_max = u_max
+        self.t_prev = None
 
-        ######### Your code ends here #########
+    def clamp(self, output):
+        if output < self.u_min:
+            return self.u_min
+        elif output > self.u_max:
+            return self.u_max
+        else:
+            return output
 
     def control(self, err, t):
-        dt = t - self.t_prev
-        if dt <= 1e-6:
+        if (self.t_prev is None):
+            self.t_prev = t
             return 0
 
-        # Compute control action here
-        ######### Your code starts here #########
+        dt = t - self.t_prev
+        self.t_prev = t
 
-        ######### Your code ends here #########
+        if dt <= rospy.Duration.from_sec(1e-10):
+            return 0
+
+        output = self.kP * err
+        return self.clamp(output)
 
 # PD controller class
 class PDController:
@@ -39,20 +54,36 @@ class PDController:
 
     def __init__(self, kP, kD, u_min, u_max):
         assert u_min < u_max, "u_min should be less than u_max"
-        # Initialize variables here
-        ######### Your code starts here #########
+        self.kP = kP
+        self.kD = kD
+        self.u_min = u_min
+        self.u_max = u_max
+        self.t_prev = None
+        self.e_prev = 0.0
 
-        ######### Your code ends here #########
+    def clamp(self, output):
+        if output < self.u_min:
+            return self.u_min
+        elif output > self.u_max:
+            return self.u_max
+        else:
+            return output
 
     def control(self, err, t):
+        if (self.t_prev is None):
+            self.t_prev = t
+            return 0
+        
         dt = t - self.t_prev
-        if dt <= 1e-6:
+        self.t_prev = t
+
+        if dt <= rospy.Duration.from_sec(1e-10):
             return 0
 
-        # Compute control action here
-        ######### Your code starts here #########
+        de = err - self.e_prev
+        output = (self.kP * err) + (self.kD * (de/dt.to_sec()))
+        return self.clamp(output)
 
-        ######### Your code ends here #########
 
 
 class RobotController:
@@ -66,6 +97,8 @@ class RobotController:
 
         # Define PD controller for wall following here
         ######### Your code starts here #########
+        self.rot_controller = PDController(0.3, 0.0, -1 * MAX_ROT_VEL, MAX_ROT_VEL)
+        self.lin_controller = PDController(0.5, 0.01, 0.00, MAX_LIN_VEL)
 
         ######### Your code ends here #########
 
@@ -74,12 +107,11 @@ class RobotController:
 
     def sensor_state_callback(self, state: SensorState):
         raw = state.cliff
-        ######### Your code starts here #########
-        # conversion from raw sensor values to distance. Use equation from Lab 2
-
-        ######### Your code ends here #########
-        # print(f"raw: {raw}\tdistance: {distance}")
+        if (raw >= 460):
+            raw = 1000
+        distance = (5691.07618 * (raw ** -0.894819)) / 35.0
         self.ir_distance = distance
+        print(f"raw: {raw}")
 
     def control_loop(self):
 
@@ -93,11 +125,14 @@ class RobotController:
                 continue
 
             ctrl_msg = Twist()
+            err = desired_distance - self.ir_distance
 
             # using PD controller, compute and send motor commands
-            ######### Your code starts here #########
+            u = self.rot_controller.control(err, rospy.get_rostime())
+            ctrl_msg.angular.z = -1 * u
 
-            ######### Your code ends here #########
+            v = self.lin_controller.control(abs(err), rospy.get_rostime())
+            ctrl_msg.linear.x = MAX_LIN_VEL - v
 
             self.robot_ctrl_pub.publish(ctrl_msg)
             print(f"dist: {round(self.ir_distance, 4)}\ttgt: {round(self.desired_distance, 4)}\tu: {round(u, 4)}")
@@ -105,7 +140,7 @@ class RobotController:
 
 
 if __name__ == "__main__":
-    desired_distance = 0.4
+    desired_distance = 0.7
     controller = RobotController(desired_distance)
     try:
         controller.control_loop()
